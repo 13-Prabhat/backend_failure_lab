@@ -145,6 +145,46 @@ make fixed CASE=BFL-0005
 - `fixed/` - реализация с middleware для request ID и структурированными логами
 - `tests/` - тесты, которые проверяют связь ответа и логов
 
+## Диаграммы
+
+Сломанный поток:
+
+```mermaid
+flowchart TD
+    A[Клиент отправляет POST /orders/100/pay с заголовком X-Request-ID: abc-123]
+    B[Middleware не читает и не сохраняет X-Request-ID]
+    C[Эндпоинт обрабатывает запрос]
+    D[logger.error — Order not found — поле request_id отсутствует]
+    E[logger.error — Payment failed — поле request_id отсутствует]
+    F[logger.error — Database error — поле request_id отсутствует]
+    G[Ответ возвращает 500 — заголовок X-Request-ID отсутствует]
+    H[Разработчик видит строки лога но не может связать их с конкретным запросом]
+
+    A --> B --> C --> D --> E --> F --> G --> H
+```
+
+Исправленный поток:
+
+```mermaid
+flowchart TD
+    A[Клиент отправляет POST /orders/100/pay с заголовком X-Request-ID: abc-123]
+    B[Middleware читает заголовок X-Request-ID или генерирует UUID]
+    C[request.state.request_id = abc-123]
+    D[Эндпоинт обрабатывает запрос]
+    E[logger.error — Order not found — request_id: abc-123]
+    F[logger.error — Payment failed — request_id: abc-123]
+    G[logger.error — Database error — request_id: abc-123]
+    H[Ответ возвращает 500 с заголовком X-Request-ID: abc-123]
+    I[Разработчик фильтрует логи по request_id: abc-123 и сразу находит все связанные строки]
+
+    A --> B --> C --> D --> E --> F --> G --> H --> I
+```
+
+Те же диаграммы хранятся в:
+
+- [`assets/broken-flow.mmd`](assets/broken-flow.mmd)
+- [`assets/fixed-flow.mmd`](assets/fixed-flow.mmd)
+
 ## Заметки для production
 
 Request IDs полезнее всего, когда они проходят через границы: HTTP-запрос, логи базы данных, фоновые задачи, внешние API-вызовы и сбор ошибок.

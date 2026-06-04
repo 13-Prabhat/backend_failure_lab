@@ -1,0 +1,12 @@
+flowchart TD
+    A[Client sends POST /orders/100/pay with X-Request-ID: abc-123]
+    B[Middleware reads X-Request-ID header or generates a UUID]
+    C[request.state.request_id = abc-123]
+    D[Endpoint processes the request]
+    E[logger.error — Order not found — request_id: abc-123]
+    F[logger.error — Payment failed — request_id: abc-123]
+    G[logger.error — Database error — request_id: abc-123]
+    H[Response returns 500 with X-Request-ID: abc-123 header]
+    I[Developer filters logs by request_id: abc-123 and finds all related lines instantly]
+
+    A --> B --> C --> D --> E --> F --> G --> H --> I

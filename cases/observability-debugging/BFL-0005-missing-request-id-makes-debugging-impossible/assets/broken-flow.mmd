@@ -1,0 +1,11 @@
+flowchart TD
+    A[Client sends POST /orders/100/pay with X-Request-ID: abc-123]
+    B[Middleware does not read or store X-Request-ID]
+    C[Endpoint processes the request]
+    D[logger.error — Order not found — no request_id field]
+    E[logger.error — Payment failed — no request_id field]
+    F[logger.error — Database error — no request_id field]
+    G[Response returns 500 — no X-Request-ID header]
+    H[Developer sees log lines but cannot tell which request caused them]
+
+    A --> B --> C --> D --> E --> F --> G --> H
