@@ -145,6 +145,46 @@ Expected result: the tests should pass because the fixed implementation returns 
 - `fixed/` - implementation with request ID middleware and structured logs
 - `tests/` - tests that verify response/log correlation
 
+## Diagrams
+
+Broken flow:
+
+```mermaid
+flowchart TD
+    A[Client sends POST /orders/100/pay with X-Request-ID: abc-123]
+    B[Middleware does not read or store X-Request-ID]
+    C[Endpoint processes the request]
+    D[logger.error — Order not found — no request_id field]
+    E[logger.error — Payment failed — no request_id field]
+    F[logger.error — Database error — no request_id field]
+    G[Response returns 500 — no X-Request-ID header]
+    H[Developer sees log lines but cannot tell which request caused them]
+
+    A --> B --> C --> D --> E --> F --> G --> H
+```
+
+Fixed flow:
+
+```mermaid
+flowchart TD
+    A[Client sends POST /orders/100/pay with X-Request-ID: abc-123]
+    B[Middleware reads X-Request-ID header or generates a UUID]
+    C[request.state.request_id = abc-123]
+    D[Endpoint processes the request]
+    E[logger.error — Order not found — request_id: abc-123]
+    F[logger.error — Payment failed — request_id: abc-123]
+    G[logger.error — Database error — request_id: abc-123]
+    H[Response returns 500 with X-Request-ID: abc-123 header]
+    I[Developer filters logs by request_id: abc-123 and finds all related lines instantly]
+
+    A --> B --> C --> D --> E --> F --> G --> H --> I
+```
+
+The same diagrams are stored in:
+
+- [`assets/broken-flow.mmd`](assets/broken-flow.mmd)
+- [`assets/fixed-flow.mmd`](assets/fixed-flow.mmd)
+
 ## Production Notes
 
 Request IDs are most useful when they are propagated across boundaries: HTTP request, database logs, worker jobs, external API calls, and error reporting.
